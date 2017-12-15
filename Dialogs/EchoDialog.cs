@@ -224,6 +224,9 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 							if (serviceInfo.faculty[0].PersonId == "0")
 							{
 								message = serviceInfo.faculty[0].DisplayName + ", " + serviceInfo.faculty[0].FacultyTitle;
+								
+								await context.PostAsync($"{message}");
+								context.Done(this);
 
 							} else
 							{
@@ -259,12 +262,16 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 						else
 						{
 							message = "I didn't find any results matching your request.";
+							await context.PostAsync($"{message}");
+							context.Done(this);
 						}
 						
 					}
 					else
 					{
 						message = "I didn't find any results matching your request.";
+						await context.PostAsync($"{message}");
+						context.Done(this);
 					}
 				}
 
@@ -273,6 +280,8 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 			else
 			{
 				message = "Hmm, I didn't understand your request. Could you please re-phrase your question? Or type Help";
+				await context.PostAsync($"{message}");
+				context.Done(this);
 
 
 			}
@@ -287,9 +296,17 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
         public async Task myHelp(IDialogContext context, LuisResult result)
         {
 			var message = "This app will look up person in Profiles, you can say, "+ Environment.NewLine + Environment.NewLine + "find \"professor name John from Radiology\"," + Environment.NewLine + Environment.NewLine + "or looking for \"researcher from Neurology\".";
-			if (result.Query.ToString().ToLower() == "thank you")
+			if (result.Query.ToLower().Contains("thank"))
 			{
 				message = "You're welcome";
+			}
+			else if (result.Query.ToString().ToLower().Contains("who"))
+			{
+				message = "Willy Ci got me up and running and has been teaching me, Leslie Rutter is trying to get respond appropriately.";
+			}
+			else if (result.Query.ToLower().Contains("hi")  || result.Query.ToLower().Contains("hello") || result.Query.ToLower() == "yo")
+			{
+				message = "Hi there.";
 			}
 			await context.PostAsync(message); //
             context.Wait(MessageReceived);
