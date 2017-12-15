@@ -209,7 +209,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 							
 							var i = 0;
 							var list = string.Empty;
-							facultyListArray = new string[serviceIn
+						
 							foreach (var person in serviceInfo.faculty)
 							{
 								i++;
