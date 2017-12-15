@@ -29,12 +29,16 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
         private const string EntityDepartment = "department";
 		private const string apiUrl = "https://profiles.search.windows.net/indexes/documentdb-index/docs?api-version=2016-09-01";
 		private string facultyList = string.Empty;
+		private string[] facultyListArray = new string[] { };
 
-        [LuisIntent("")]
+		[LuisIntent("")]
         [LuisIntent("None")]
         public async Task None(IDialogContext context, LuisResult result)
-        {
-            string message = $"Sorry, I did not understand '{result.Query}'. Type 'help' if you need assistance.";
+		{
+			string message = $"Sorry, I did not understand '{result.Query}'. Type 'help' if you need assistance.";
+			if (result.Query.ToString().ToLower() == "thank you" || result.Query.ToString().ToLower() == "thanks") {
+				message = "You're welcome";
+			}
 
             await context.PostAsync(message);
 
@@ -105,7 +109,6 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 		[LuisIntent("findByRankNameDepartment")]
         public async Task findByRankNameDepartment(IDialogContext context, LuisResult result)
         {
-			facultyList = "";
 			await context.PostAsync("Searching ... ");
 			
 
@@ -206,13 +209,15 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 							
 							var i = 0;
 							var list = string.Empty;
+							facultyListArray = new string[serviceIn
 							foreach (var person in serviceInfo.faculty)
 							{
 								i++;
 								var personid = person.PersonId;
 								list += i + ". "  + person.DisplayName + ", " + person.FacultyTitle + Environment.NewLine + "     " + person.Division + person.Department + Environment.NewLine + "     " + person.ProfilePersonUrl + Environment.NewLine + Environment.NewLine;
-							
-				
+
+
+
 
 							}
 							//check if only one and it's an error
@@ -228,7 +233,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 								if (serviceInfo.faculty.Count() < 11)
 								{
 									string userName = "";
-									string email;
+									//string email;
 									var activity = context.Activity;
 									if (activity.From.Name != null)
 									{
@@ -245,7 +250,9 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 								}
 								else
 								{
-									message = "There were more than 10 results. Please refine your search.";
+									message = "There were too many results to list. Pick a number and I will show just that one [this is not finished]...";
+									await context.PostAsync($"{message}");
+									context.Done(this);
 								}
 							}
 						}
@@ -279,7 +286,12 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
         [LuisIntent("myHelp")]
         public async Task myHelp(IDialogContext context, LuisResult result)
         {
-            await context.PostAsync("This app will look up person in Profiles, you can say, find \"professor name John from Radiology\", or looking for \"researcher from Neurology\"."); //
+			var message = "This app will look up person in Profiles, you can say, "+ Environment.NewLine + Environment.NewLine + "find \"professor name John from Radiology\"," + Environment.NewLine + Environment.NewLine + "or looking for \"researcher from Neurology\".";
+			if (result.Query.ToString().ToLower() == "thank you")
+			{
+				message = "You're welcome";
+			}
+			await context.PostAsync(message); //
             context.Wait(MessageReceived);
         }
 
@@ -308,6 +320,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 			}
 			else
 			{
+				await context.PostAsync("Ok. I won't send it.");
 				context.Done(this);
 			}
 		}
