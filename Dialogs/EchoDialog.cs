@@ -3,7 +3,8 @@ using System;
     using System.Linq;
     using System.Threading.Tasks;
     using System.Web;
-    using Microsoft.Bot.Builder.Dialogs;
+using System.Web.UI;
+using Microsoft.Bot.Builder.Dialogs;
     using Microsoft.Bot.Builder.FormFlow;
     using Microsoft.Bot.Builder.Luis;
     using Microsoft.Bot.Builder.Luis.Models;
@@ -11,6 +12,8 @@ using System;
 	using System.Net.Http;
 	using System.Net.Http.Headers;
 using SimpleEchoBot.Helpers.ProfilesApiClient;
+using static SimpleEchoBot.Helpers.ProfilesApiClient.FacultyList;
+using SimpleEchoBot.Helpers.BotPromptDialog;
 
 namespace Microsoft.Bot.Sample.SimpleEchoBot
 {
@@ -25,7 +28,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 
         private const string EntityDepartment = "department";
 		private const string apiUrl = "https://profiles.search.windows.net/indexes/documentdb-index/docs?api-version=2016-09-01";
-
+		private string facultyList = string.Empty;
 
         [LuisIntent("")]
         [LuisIntent("None")]
@@ -102,7 +105,7 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 		[LuisIntent("findByRankNameDepartment")]
         public async Task findByRankNameDepartment(IDialogContext context, LuisResult result)
         {
-
+			facultyList = "";
 			await context.PostAsync("Searching ... ");
 			
 
@@ -187,10 +190,20 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 					if (serviceInfo != null && serviceInfo.faculty.Any())
 					{
 						var singularPlural = (serviceInfo.faculty.Count() == 1) ? " result." : " results.";
-						await context.PostAsync($"I found " + serviceInfo.faculty.Count() + singularPlural + " Let me get a list together...");
+						var listMessage = "I found " + serviceInfo.faculty.Count() + singularPlural;
+						if (serviceInfo.faculty.Count() > 1 && serviceInfo.faculty.Count() < 10)
+						{
+							listMessage += " Let me get a list together...";
+							await context.PostAsync(listMessage);
+						}
+						else
+						{
+							listMessage += "The list is pretty long, do you want me to show the list anyway?";
+						}
 
 						if (serviceInfo.faculty.Count() > 0)
 						{
+							
 							var i = 0;
 							var list = string.Empty;
 							foreach (var person in serviceInfo.faculty)
@@ -209,8 +222,9 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 
 							} else
 							{
-								
 								//display the list
+
+
 								if (serviceInfo.faculty.Count() < 11)
 								{
 									string userName = "";
@@ -220,13 +234,14 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 									{
 										userName = activity.From.Name + ", ";
 									}
-
+									facultyList = "Here is the list of faculty you requested from FindADoc Bot:" + Environment.NewLine + list;
 									message = Environment.NewLine + list;
 									message += Environment.NewLine + Environment.NewLine;
 									//message += userName;
-									message += "Would you like me to send this info to your email?";
-
-									
+									message += Environment.NewLine + "Would you like me to send this info to your email or phone?";
+									await context.PostAsync($"{message}");
+									// Show the list of plan  
+									context.Wait(this.SendListTask);
 								}
 								else
 								{
@@ -256,9 +271,9 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
 			}
 
 
-
-			await context.PostAsync($"{message}");
-			context.Wait(MessageReceived);
+			
+			//await context.PostAsync($"{message}");
+			//context.Wait(MessageReceived);
         }
 
         [LuisIntent("myHelp")]
@@ -268,6 +283,45 @@ namespace Microsoft.Bot.Sample.SimpleEchoBot
             context.Wait(MessageReceived);
         }
 
+
+		public virtual async Task DisplayOneItem(IDialogContext context, IAwaitable<IMessageActivity> activity)
+		{
+
+		}
+		public virtual async Task SendListTask(IDialogContext context, IAwaitable<IMessageActivity> activity)
+		{
+			var message = await activity;
+			var listOfSAnswers = new string[] { "yes", "ya", "sure", "yup", "alright","email","phone","ok" };
+
+			bool answerIsYes = listOfSAnswers.Any(s => message.Text.ToLower().Contains(s));
+			if (answerIsYes)
+			{
+
+				PromptDialog.Choice(
+				    context: context,
+				    resume: ChoiceReceivedAsync,
+				    options: (IEnumerable<SendList>)Enum.GetValues(typeof(SendList)),
+				    prompt: "Selection an option below if you would like to send this list to yourself",
+				    retry: "Something went wrong. Please try again.",
+				    promptStyle: PromptStyle.Auto
+				    );
+			}
+			else
+			{
+				context.Done(this);
+			}
+		}
+		public virtual async Task ChoiceReceivedAsync(IDialogContext context, IAwaitable<SendList> activity)
+		{
+			SendList response = await activity;
+			context.Call<object>(new GetList(response.ToString(), facultyList), ChildDialogComplete);
+
+		}
+		public virtual async Task ChildDialogComplete(IDialogContext context, IAwaitable<object> response)
+		{
+			await context.PostAsync("Can I help you with another search?");
+			context.Done(this);
+		}
 
 
 		public string FirstLetterToUpper(string str)

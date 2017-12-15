@@ -13,6 +13,12 @@ namespace SimpleEchoBot.Helpers.ProfilesApiClient
 
 	public class FacultyList
 	{
+		public enum SendList
+		{
+			SMS,
+			Email,
+			Slack,
+		}
 		public class FacultyPerson
 		{
 			public string PersonId { get; set; }
